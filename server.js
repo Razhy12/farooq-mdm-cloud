@@ -152,11 +152,27 @@ wss.on('connection', (ws, req) => {
         socketClients.set(deviceId, ws);
         console.log(`Device connected via WebSocket: ${deviceId}`);
 
-        // Update online status in database
-        const dev = devices.find(d => d.id === deviceId);
+        // Update online status in database or auto-register new phone
+        let dev = devices.find(d => d.id === deviceId);
         if (dev) {
             dev.isOnline = true;
             saveDevices();
+        } else {
+            const newDev = {
+                id: deviceId,
+                customerName: `Naya Phone (${deviceId})`,
+                customerPhone: "Number darj nahi",
+                phoneModel: "Android Smartphone",
+                imei: "Auto-Detected",
+                status: "ACTIVE",
+                ownerName: settings.shopName || "Farooq Mobile Center",
+                ownerPhone: settings.shopPhone || "+92 300 1234567",
+                createdAt: new Date().toISOString(),
+                isOnline: true
+            };
+            devices.unshift(newDev);
+            saveDevices();
+            console.log(`[AUTO-REGISTER] Discovered new customer phone: ${deviceId}`);
         }
     }
 
@@ -166,11 +182,30 @@ wss.on('connection', (ws, req) => {
             console.log(`Received from ${deviceId}:`, data);
 
             if (data.type === 'HEARTBEAT' && data.deviceId) {
-                const dev = devices.find(d => d.id === data.deviceId);
+                let dev = devices.find(d => d.id === data.deviceId);
                 if (dev) {
                     dev.isOnline = true;
                     if (data.model) dev.phoneModel = data.model;
+                    if (data.customerName && data.customerName !== "Customer") dev.customerName = data.customerName;
                     saveDevices();
+                } else {
+                    const newDev = {
+                        id: data.deviceId,
+                        customerName: data.customerName && data.customerName !== "Customer" 
+                            ? data.customerName 
+                            : `Naya Phone (${data.model || 'Android'})`,
+                        customerPhone: "Number darj nahi",
+                        phoneModel: data.model || "Android Smartphone",
+                        imei: "Auto-Detected",
+                        status: "ACTIVE",
+                        ownerName: settings.shopName || "Farooq Mobile Center",
+                        ownerPhone: settings.shopPhone || "+92 300 1234567",
+                        createdAt: new Date().toISOString(),
+                        isOnline: true
+                    };
+                    devices.unshift(newDev);
+                    saveDevices();
+                    console.log(`[AUTO-REGISTER VIA HEARTBEAT] ${data.deviceId} (${data.model})`);
                 }
             }
         } catch (err) {
@@ -304,6 +339,29 @@ app.post('/api/devices/add', async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: "QR code generate karne mein masla hua" });
     }
+});
+
+// 2b. Update customer info (Name, Phone, Model)
+app.post('/api/devices/:id/update', (req, res) => {
+    const { id } = req.params;
+    const { customerName, customerPhone, phoneModel } = req.body;
+    const dev = devices.find(d => d.id === id);
+
+    if (!dev) {
+        return res.status(404).json({ error: "Device record nahi mila!" });
+    }
+
+    if (customerName) dev.customerName = customerName.trim();
+    if (customerPhone) dev.customerPhone = customerPhone.trim();
+    if (phoneModel) dev.phoneModel = phoneModel.trim();
+    saveDevices();
+
+    console.log(`[DEVICE UPDATED] ${id} renamed to "${dev.customerName}", Phone: "${dev.customerPhone}"`);
+    res.json({
+        success: true,
+        message: "Customer details kamyabi se update ho gayin!",
+        device: dev
+    });
 });
 
 // 3. LOCK DEVICE (Immediate trigger)

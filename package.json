@@ -1,0 +1,26 @@
+{
+  "name": "dukan-mdm-backend",
+  "version": "1.0.0",
+  "description": "Production Cloud MDM Server for Farooq Mobile Center",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"No test specified\" && exit 0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["mdm", "device-owner", "installment-lock"],
+  "author": "Muhammad Farooq",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "qrcode": "^1.5.4",
+    "uuid": "^14.0.3",
+    "ws": "^8.22.0"
+  }
+}

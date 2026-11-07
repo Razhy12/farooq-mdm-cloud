@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Dukan MDM Controller & Live Device Simulator</title>
+  <!-- Tailwind CSS & Google Fonts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #070B14;
+      color: #F8FAFC;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .heading-font {
+      font-family: 'Outfit', sans-serif;
+    }
+    .glass-card {
+      background: #111827;
+      border: 1px solid #1E293B;
+      backdrop-filter: blur(12px);
+    }
+    .glass-card-locked {
+      background: #111827;
+      border: 1.5px solid rgba(239, 68, 68, 0.45);
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.12);
+    }
+    .gradient-primary {
+      background: linear-gradient(135deg, #6366F1 0%, #06B6D4 100%);
+    }
+    .gradient-lock {
+      background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+    }
+    .gradient-unlock {
+      background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    }
+    /* Realistic Phone Mockup Styling */
+    .phone-case {
+      width: 320px;
+      height: 640px;
+      border-radius: 44px;
+      padding: 12px;
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 2px #334155, 0 0 35px rgba(6, 182, 212, 0.15);
+      position: relative;
+    }
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      border-radius: 34px;
+      overflow: hidden;
+      position: relative;
+      background: #0F172A;
+    }
+    .phone-notch {
+      width: 110px;
+      height: 24px;
+      background: #000;
+      border-radius: 0 0 16px 16px;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 40;
+    }
+    @keyframes pulse-red {
+      0%, 100% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.4); }
+      50% { box-shadow: 0 0 45px rgba(239, 68, 68, 0.8); }
+    }
+    .locked-glow {
+      animation: pulse-red 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-16">
+
+  <!-- Top Bar -->
+  <header class="sticky top-0 z-30 bg-[#090D16]/95 backdrop-blur-md border-b border-[#1E293B] px-4 py-3">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 id="shopTitleHeader" class="heading-font text-lg font-bold tracking-tight text-white leading-tight">Farooq Mobile Center</h1>
+          <p id="ownerSubHeader" class="text-[11px] text-cyan-400 font-semibold tracking-wide flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Owner: Muhammad Farooq • 100+ MDM Controller
+          </p>
+        </div>
+      </div>
+
+      <!-- Action & View Controls -->
+      <div class="flex items-center space-x-2">
+        <a href="/Dukan_MDM_Owner_App.apk" download class="hidden md:flex px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold items-center gap-1.5 hover:bg-emerald-500/30">
+          <span>📲 Download Owner APK</span>
+        </a>
+        <button onclick="openSettingsModal()" class="px-3 py-1.5 rounded-xl bg-[#1E293B] text-cyan-400 border border-cyan-500/30 text-xs font-bold flex items-center gap-1.5 hover:bg-cyan-500/10">
+          <span>🏪 Dukan Profile</span>
+        </button>
+        <button onclick="openAddModal()" class="hidden sm:flex px-3.5 py-1.5 rounded-xl gradient-primary text-white text-xs font-bold items-center gap-1.5 shadow-md">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Naya Phone
+        </button>
+        <button onclick="fetchDevices()" title="Refresh" class="p-2 text-slate-400 hover:text-white rounded-lg bg-[#1E293B] border border-[#334155]">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Live Announcement Banner -->
+  <div class="bg-cyan-950/40 border-b border-cyan-800/30 px-4 py-2">
+    <div class="max-w-6xl mx-auto flex items-center justify-between text-xs text-cyan-300">
+      <span class="flex items-center gap-2">
+        <span>💡 <b>Live Testing Guide:</b> Kisi bhi customer ke samne <b>"LOCK PHONE NOW"</b> dabayein aur samne mobile screen ko foran lock hote dekhein!</span>
+      </span>
+      <span class="hidden md:inline text-slate-400">WebSocket Connected: <b class="text-emerald-400">Active</b></span>
+    </div>
+  </div>
+
+  <!-- Two Column Layout: Left Controller, Right Live Phone Simulator -->
+  <main class="max-w-6xl mx-auto px-4 pt-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+      <!-- LEFT COLUMN: Controller Dashboard (7 cols on desktop) -->
+      <div class="lg:col-span-7 space-y-4">
+        
+        <!-- Metric Cards -->
+        <div class="grid grid-cols-3 gap-2 sm:gap-3">
+          <div onclick="setFilter('ALL')" class="stat-card cursor-pointer p-3.5 rounded-2xl bg-[#131A29] border border-[#1E293B] hover:border-indigo-500 transition">
+            <span class="text-[11px] font-semibold text-slate-400">TOTAL</span>
+            <p id="totalStat" class="heading-font text-2xl font-bold text-white mt-1">0</p>
+          </div>
+          <div onclick="setFilter('ACTIVE')" class="stat-card cursor-pointer p-3.5 rounded-2xl bg-[#131A29] border border-[#1E293B] hover:border-emerald-500 transition">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-semibold text-emerald-400">NORMAL</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            </div>
+            <p id="activeStat" class="heading-font text-2xl font-bold text-emerald-400 mt-1">0</p>
+          </div>
+          <div onclick="setFilter('LOCKED')" class="stat-card cursor-pointer p-3.5 rounded-2xl bg-[#131A29] border border-[#1E293B] hover:border-red-500 transition">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-semibold text-red-400">LOCKED</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+            </div>
+            <p id="lockedStat" class="heading-font text-2xl font-bold text-red-400 mt-1">0</p>
+          </div>
+        </div>
+
+        <!-- Search Input -->
+        <div class="relative">
+          <input type="text" id="searchInput" oninput="filterDevices()" placeholder="Search customer name, phone, model, IMEI..."
+            class="w-full pl-10 pr-4 py-3 rounded-xl bg-[#111827] border border-[#1E293B] text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition">
+          <svg class="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+        </div>
+
+        <!-- Section Header -->
+        <div class="flex items-center justify-between pt-1">
+          <h2 class="text-sm font-bold text-slate-300 heading-font">Customer Phones List</h2>
+          <span class="text-xs text-slate-400">Tap buttons below to test lock/unlock</span>
+        </div>
+
+        <!-- Customer Cards List -->
+        <div id="deviceList" class="space-y-3">
+          <!-- Dynamically Rendered -->
+        </div>
+
+        <!-- Mobile-only Add Button -->
+        <div class="sm:hidden pt-4">
+          <button onclick="openAddModal()" class="w-full py-3.5 rounded-2xl gradient-primary text-white font-bold heading-font flex items-center justify-center space-x-2 shadow-xl">
+            <span>+ NAYA PHONE ADD KAREIN</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: Live Customer Phone Simulator (5 cols on desktop) -->
+      <div class="lg:col-span-5 flex flex-col items-center">
+        
+        <!-- Simulator Control Header -->
+        <div class="w-full max-w-[320px] mb-3 flex items-center justify-between">
+          <div>
+            <h3 class="heading-font text-sm font-bold text-white flex items-center gap-1.5">
+              <span>📱 Live Phone Screen</span>
+              <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+            </h3>
+            <p class="text-[11px] text-slate-400">Real-time Customer Mobile View</p>
+          </div>
+          <!-- Device Switcher -->
+          <select id="simulatedDeviceSelect" onchange="switchSimulatedDevice(this.value)" class="text-xs bg-[#1E293B] border border-[#334155] text-cyan-300 rounded-lg px-2 py-1 outline-none">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+
+        <!-- The Realistic Smartphone Frame -->
+        <div id="phoneCase" class="phone-case transition-all duration-300">
+          
+          <div id="phoneScreen" class="phone-screen flex flex-col justify-between">
+            
+            <!-- Camera Notch -->
+            <div class="phone-notch"></div>
+
+            <!-- Top Status Bar -->
+            <div class="flex items-center justify-between px-6 pt-3 text-[11px] text-slate-300 z-30 font-medium">
+              <span id="phoneClock">12:00</span>
+              <div class="flex items-center gap-1.5 text-xs">
+                <span>📶 4G</span>
+                <span>🔋 92%</span>
+              </div>
+            </div>
+
+            <!-- VIEW A: UNLOCKED STATE (Home Screen) -->
+            <div id="unlockedView" class="h-full flex flex-col justify-between px-4 py-8 select-none transition-all duration-300">
+              
+              <!-- Clock Widget -->
+              <div class="text-center pt-8">
+                <h1 id="widgetTime" class="heading-font text-4xl font-bold text-white tracking-tight">12:00</h1>
+                <p id="widgetDate" class="text-xs text-slate-300 font-medium mt-1">Friday, October 24</p>
+                <div class="inline-flex items-center gap-1 mt-3 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-semibold border border-emerald-500/40">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Phone Unlocked (Normal)
+                </div>
+              </div>
+
+              <!-- App Icons Grid (Simulating Normal Phone Apps) -->
+              <div class="grid grid-cols-4 gap-3 px-2">
+                <div onclick="simulateAppTap('WhatsApp')" class="cursor-pointer flex flex-col items-center">
+                  <div class="w-11 h-11 rounded-2xl bg-emerald-600 flex items-center justify-center text-xl shadow-md active:scale-90 transition">💬</div>
+                  <span class="text-[10px] text-slate-300 mt-1">WhatsApp</span>
+                </div>
+                <div onclick="simulateAppTap('Camera')" class="cursor-pointer flex flex-col items-center">
+                  <div class="w-11 h-11 rounded-2xl bg-slate-700 flex items-center justify-center text-xl shadow-md active:scale-90 transition">📷</div>
+                  <span class="text-[10px] text-slate-300 mt-1">Camera</span>
+                </div>
+                <div onclick="simulateAppTap('YouTube')" class="cursor-pointer flex flex-col items-center">
+                  <div class="w-11 h-11 rounded-2xl bg-red-600 flex items-center justify-center text-xl shadow-md active:scale-90 transition">▶️</div>
+                  <span class="text-[10px] text-slate-300 mt-1">YouTube</span>
+                </div>
+                <div onclick="simulateAppTap('Settings')" class="cursor-pointer flex flex-col items-center">
+                  <div class="w-11 h-11 rounded-2xl bg-slate-800 flex items-center justify-center text-xl shadow-md active:scale-90 transition">⚙️</div>
+                  <span class="text-[10px] text-slate-300 mt-1">Settings</span>
+                </div>
+              </div>
+
+              <!-- Bottom Dock Apps -->
+              <div class="bg-white/10 backdrop-blur-md rounded-2xl p-2.5 grid grid-cols-4 gap-2">
+                <div onclick="simulateAppTap('Dialer')" class="cursor-pointer flex flex-col items-center">
+                  <div class="w-10 h-10 rounded-xl bg-green-500 flex items-center justify-center text-lg shadow">📞</div>
+                </div>
+                <div onclick="simulateAppTap('Messages')" class="cursor-pointer flex flex-col items-center">
+                  <div class="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-lg shadow">✉️</div>
+                </div>
+                <div onclick="simulateAppTap('Chrome')" class="cursor-pointer flex flex-col items-center">
+                  <div class="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-lg shadow">🌐</div>
+                </div>
+                <div onclick="simulateAppTap('Gallery')" class="cursor-pointer flex flex-col items-center">
+                  <div class="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center text-lg shadow">🖼️</div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- VIEW B: LOCKED KIOSK STATE (When Owner Locks Phone) -->
+            <div id="lockedView" class="h-full flex flex-col justify-between px-4 py-8 bg-[#0B0F19] text-center hidden transition-all duration-300">
+              
+              <div class="pt-6">
+                <!-- Flashing Red Lock Icon -->
+                <div class="w-16 h-16 rounded-full bg-red-500/20 border-2 border-red-500 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-red-500/40 animate-bounce">
+                  <svg class="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+                  </svg>
+                </div>
+
+                <h2 class="heading-font text-xl font-extrabold text-red-500 tracking-wider">DEVICE LOCKED</h2>
+                <p class="text-xs text-slate-300 mt-2 px-2 leading-relaxed">
+                  Aapke phone ki Qist (Installment) baqi hai. Phone temporary lock kar diya gaya hai.
+                </p>
+
+                <!-- Store Owner Contact Card -->
+                <div class="mt-5 p-3.5 rounded-2xl bg-[#111827] border border-red-500/30 text-left space-y-1">
+                  <span class="text-[10px] text-slate-400 uppercase font-semibold">Rabta Karein:</span>
+                  <p id="simOwnerName" class="heading-font text-sm font-bold text-white">Al-Madina Mobile Center</p>
+                  <p id="simOwnerPhone" class="text-xs font-bold text-cyan-400">+92 300 9876543</p>
+                  <p id="simDeviceId" class="text-[10px] text-slate-500 pt-1 border-t border-[#1E293B]">ID: DEV-1001</p>
+                </div>
+              </div>
+
+              <!-- Action Buttons (Only Call Allowed) -->
+              <div class="space-y-2 pb-2">
+                <button onclick="alert('Calling Shopkeeper: ' + document.getElementById('simOwnerPhone').innerText)" class="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 active:scale-95 transition">
+                  <span>📞 Dukandar ko Call Karein</span>
+                </button>
+                <button onclick="alert('Calling 1122 Police/Rescue Emergency...')" class="w-full py-2.5 rounded-xl bg-slate-800 text-slate-300 font-semibold text-xs border border-slate-700 active:scale-95 transition">
+                  🚨 Emergency Call (1122)
+                </button>
+                <p class="text-[10px] text-red-400/80 font-medium">⚠️ Settings &amp; Factory Reset Blocked</p>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Simulator Instructions Pill -->
+        <div class="mt-4 text-center max-w-[320px]">
+          <p class="text-xs text-slate-400">
+            Left side par customer ke <b>LOCK</b> ya <b>UNLOCK</b> button par click karein. Yeh phone screen <b>real-time</b> response degi!
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Add Customer Modal -->
+  <div id="addModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-[#0F172A] w-full max-w-md rounded-t-3xl sm:rounded-3xl border border-[#334155] p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-[#1E293B] pb-3">
+        <h2 id="modalTitle" class="heading-font text-lg font-bold text-white">Naya Phone Enroll Karein</h2>
+        <button onclick="closeAddModal()" class="text-slate-400 hover:text-white p-1">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div id="formContainer" class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Customer ka Naam</label>
+          <input type="text" id="custName" placeholder="jaise: Ali Khan" class="w-full px-3.5 py-2.5 rounded-xl bg-[#1E293B] border border-[#334155] text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Customer Phone Number</label>
+          <input type="text" id="custPhone" placeholder="+92 301 2345678" class="w-full px-3.5 py-2.5 rounded-xl bg-[#1E293B] border border-[#334155] text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Mobile Model</label>
+          <input type="text" id="custModel" placeholder="jaise: Redmi Note 12" class="w-full px-3.5 py-2.5 rounded-xl bg-[#1E293B] border border-[#334155] text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">IMEI Number (Optional)</label>
+          <input type="text" id="custImei" placeholder="867492048291047" class="w-full px-3.5 py-2.5 rounded-xl bg-[#1E293B] border border-[#334155] text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+
+        <button onclick="submitNewDevice()" class="w-full mt-4 py-3 rounded-xl gradient-primary text-white font-bold heading-font text-sm">
+          GENERATE ENROLLMENT QR
+        </button>
+      </div>
+
+      <!-- QR Code Display Area -->
+      <div id="qrContainer" class="hidden space-y-4 text-center">
+        <div class="bg-white p-4 rounded-2xl inline-block mx-auto shadow-xl" id="qrcode"></div>
+        <div class="bg-[#1E293B] p-3 rounded-xl text-left border border-[#334155] text-xs text-slate-300 space-y-1">
+          <p class="font-bold text-white mb-1">📌 Naye Phone par Setup Ka Tareeqa:</p>
+          <p>1. Naya mobile On karein (Welcome screen par).</p>
+          <p>2. Welcome screen par 6 dafa tap karein camera khulne tak.</p>
+          <p>3. Apne mobile se yeh QR Code scan karein.</p>
+          <p>4. Phone lock protection activate ho jayegi.</p>
+        </div>
+        <button onclick="closeAddModal()" class="w-full py-2.5 rounded-xl bg-[#1E293B] text-slate-200 text-sm font-semibold">
+          Mukammal Hua (Done)
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Shop Settings Modal -->
+  <div id="settingsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-[#0F172A] w-full max-w-md rounded-t-3xl sm:rounded-3xl border border-[#334155] p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-[#1E293B] pb-3">
+        <h2 class="heading-font text-lg font-bold text-white flex items-center gap-2">
+          <span>🏪</span> Dukan Profile Settings
+        </h2>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white p-1">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Dukan Malik (Owner Name)</label>
+          <input type="text" id="setOwnerName" placeholder="Muhammad Farooq" class="w-full px-3.5 py-2.5 rounded-xl bg-[#1E293B] border border-[#334155] text-sm text-white focus:outline-none focus:border-cyan-500 font-semibold">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Dukan ka Naam (Shop Name)</label>
+          <input type="text" id="setShopName" placeholder="Farooq Mobile Center" class="w-full px-3.5 py-2.5 rounded-xl bg-[#1E293B] border border-[#334155] text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Dukan Phone / WhatsApp Number</label>
+          <input type="text" id="setShopPhone" placeholder="+92 300 1234567" class="w-full px-3.5 py-2.5 rounded-xl bg-[#1E293B] border border-[#334155] text-sm text-white focus:outline-none focus:border-cyan-500">
+          <p class="text-[10px] text-slate-500 mt-1">Yeh number customer ki lock screen aur WhatsApp reminder par show hoga.</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Emergency Helpline</label>
+          <input type="text" id="setEmergencyPhone" placeholder="1122" class="w-full px-3.5 py-2.5 rounded-xl bg-[#1E293B] border border-[#334155] text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Dukan ka Pata / City (Address)</label>
+          <input type="text" id="setShopAddress" placeholder="Shop #12, Mobile Market" class="w-full px-3.5 py-2.5 rounded-xl bg-[#1E293B] border border-[#334155] text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+
+        <button onclick="saveShopSettings()" class="w-full mt-4 py-3 rounded-xl gradient-primary text-white font-bold heading-font text-sm flex items-center justify-center gap-2">
+          <span>💾 DUKAN PROFILE SAVE KAREIN</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let devices = [];
+    let currentFilter = 'ALL';
+    let currentSimulatedId = null;
+    let shopSettings = {
+      ownerName: "Muhammad Farooq",
+      shopName: "Farooq Mobile Center",
+      shopPhone: "+92 300 1234567",
+      emergencyPhone: "1122",
+      address: "Main Mobile Market"
+    };
+
+    function openSettingsModal() {
+      document.getElementById('setOwnerName').value = shopSettings.ownerName || '';
+      document.getElementById('setShopName').value = shopSettings.shopName || '';
+      document.getElementById('setShopPhone').value = shopSettings.shopPhone || '';
+      document.getElementById('setEmergencyPhone').value = shopSettings.emergencyPhone || '1122';
+      document.getElementById('setShopAddress').value = shopSettings.address || '';
+      document.getElementById('settingsModal').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.add('hidden');
+    }
+
+    async function fetchSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        shopSettings = await res.json();
+        document.getElementById('shopTitleHeader').innerText = shopSettings.shopName || 'Farooq Mobile Center';
+        document.getElementById('ownerSubHeader').innerHTML = `
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          Owner: ${shopSettings.ownerName || 'Muhammad Farooq'} • 100+ MDM Controller
+        `;
+        updateSimulatorScreen();
+      } catch(err) {
+        console.error("Settings load error:", err);
+      }
+    }
+
+    async function saveShopSettings() {
+      const ownerName = document.getElementById('setOwnerName').value.trim();
+      const shopName = document.getElementById('setShopName').value.trim();
+      const shopPhone = document.getElementById('setShopPhone').value.trim();
+      const emergencyPhone = document.getElementById('setEmergencyPhone').value.trim();
+      const address = document.getElementById('setShopAddress').value.trim();
+
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerName, shopName, shopPhone, emergencyPhone, address })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        shopSettings = data.settings;
+        document.getElementById('shopTitleHeader').innerText = shopSettings.shopName;
+        document.getElementById('ownerSubHeader').innerHTML = `
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          Owner: ${shopSettings.ownerName} • 100+ MDM Controller
+        `;
+        closeSettingsModal();
+        alert("✅ Dukan ki details kamyabi se save ho gayin!");
+        fetchDevices();
+      }
+    }
+
+    // Sound effect synthesizer (Web Audio API - no external file needed)
+    function playBeep(type) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        if (type === 'lock') {
+          osc.frequency.setValueAtTime(440, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.3);
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.3);
+        } else if (type === 'unlock') {
+          osc.frequency.setValueAtTime(330, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.25);
+          gain.gain.setValueAtTime(0.2, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.25);
+        }
+      } catch (e) {}
+    }
+
+    // Live Clock Update
+    function updatePhoneClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      const dateStr = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+      document.getElementById('phoneClock').innerText = timeStr;
+      document.getElementById('widgetTime').innerText = timeStr;
+      document.getElementById('widgetDate').innerText = dateStr;
+    }
+    setInterval(updatePhoneClock, 1000);
+    updatePhoneClock();
+
+    async function fetchDevices() {
+      try {
+        const res = await fetch('/api/devices');
+        devices = await res.json();
+        renderDevices();
+        updateSimulatorSelect();
+        updateSimulatorScreen();
+      } catch(err) {
+        console.error(err);
+      }
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      renderDevices();
+    }
+
+    function filterDevices() {
+      renderDevices();
+    }
+
+    function updateSimulatorSelect() {
+      const select = document.getElementById('simulatedDeviceSelect');
+      const prev = select.value;
+      select.innerHTML = '';
+
+      if (devices.length === 0) return;
+
+      if (!currentSimulatedId) {
+        currentSimulatedId = devices[0].id;
+      }
+
+      devices.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.id;
+        opt.innerText = `${d.customerName} (${d.id})`;
+        if (d.id === currentSimulatedId) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    function switchSimulatedDevice(id) {
+      currentSimulatedId = id;
+      updateSimulatorScreen();
+    }
+
+    function updateSimulatorScreen() {
+      const dev = devices.find(d => d.id === currentSimulatedId) || devices[0];
+      if (!dev) return;
+
+      const isLocked = dev.status === 'LOCKED';
+      const phoneCase = document.getElementById('phoneCase');
+      const unlockedView = document.getElementById('unlockedView');
+      const lockedView = document.getElementById('lockedView');
+
+      document.getElementById('simOwnerName').innerText = dev.ownerName || shopSettings.shopName || 'Farooq Mobile Center';
+      document.getElementById('simOwnerPhone').innerText = dev.ownerPhone || shopSettings.shopPhone || '+92 300 1234567';
+      document.getElementById('simDeviceId').innerText = `ID: ${dev.id} (${dev.phoneModel || 'Smartphone'})`;
+
+      if (isLocked) {
+        phoneCase.classList.add('locked-glow');
+        unlockedView.classList.add('hidden');
+        lockedView.classList.remove('hidden');
+      } else {
+        phoneCase.classList.remove('locked-glow');
+        lockedView.classList.add('hidden');
+        unlockedView.classList.remove('hidden');
+      }
+    }
+
+    function simulateAppTap(appName) {
+      const dev = devices.find(d => d.id === currentSimulatedId);
+      if (dev && dev.status === 'LOCKED') {
+        alert("⚠️ ACCESS BLOCKED: Phone is Locked by Shopkeeper. Barah-e-karam dukandar se rabta karein!");
+      } else {
+        alert(`Opening ${appName}... (Phone is active and functioning normally)`);
+      }
+    }
+
+    function renderDevices() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      const list = document.getElementById('deviceList');
+      list.innerHTML = '';
+
+      let filtered = devices.filter(d => {
+        const matchesQuery = d.customerName.toLowerCase().includes(q) ||
+          d.customerPhone.toLowerCase().includes(q) ||
+          (d.phoneModel && d.phoneModel.toLowerCase().includes(q)) ||
+          d.id.toLowerCase().includes(q);
+        
+        if (currentFilter === 'ACTIVE') return matchesQuery && d.status === 'ACTIVE';
+        if (currentFilter === 'LOCKED') return matchesQuery && d.status === 'LOCKED';
+        return matchesQuery;
+      });
+
+      // Update counters
+      document.getElementById('totalStat').innerText = devices.length;
+      document.getElementById('activeStat').innerText = devices.filter(d => d.status === 'ACTIVE').length;
+      document.getElementById('lockedStat').innerText = devices.filter(d => d.status === 'LOCKED').length;
+
+      if (filtered.length === 0) {
+        list.innerHTML = `
+          <div class="text-center py-12 text-slate-500 glass-card rounded-2xl">
+            <p class="text-sm">Koi customer record nahi mila.</p>
+          </div>
+        `;
+        return;
+      }
+
+      filtered.forEach(d => {
+        const isLocked = d.status === 'LOCKED';
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-2xl ${isLocked ? 'glass-card-locked' : 'glass-card'} transition-all`;
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-3">
+              <div class="w-11 h-11 rounded-full ${isLocked ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'} flex items-center justify-center font-bold heading-font text-lg">
+                ${d.customerName ? d.customerName[0].toUpperCase() : 'C'}
+              </div>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <h3 class="font-bold text-white heading-font text-base leading-tight">${d.customerName}</h3>
+                  <span class="w-2 h-2 rounded-full ${d.isOnline ? 'bg-emerald-500' : 'bg-slate-600'}"></span>
+                </div>
+                <p class="text-xs text-slate-400">${d.phoneModel || 'Smartphone'}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] font-bold px-2.5 py-1 rounded-full ${isLocked ? 'bg-red-500/10 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'}">
+                ${isLocked ? '🔒 LOCKED' : '🛡️ NORMAL'}
+              </span>
+              <button onclick="switchSimulatedDevice('${d.id}')" title="Live Preview on Right Screen" class="px-2 py-1 rounded-lg bg-[#1E293B] text-[11px] text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/10">
+                View 📱
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 mb-3 text-[11px] text-slate-400">
+            <span class="bg-[#1E293B] px-2 py-0.5 rounded-md">📞 ${d.customerPhone}</span>
+            <span class="bg-[#1E293B] px-2 py-0.5 rounded-md">ID: ${d.id}</span>
+          </div>
+
+          <div class="flex items-center space-x-2 pt-2 border-t border-[#1E293B]">
+            ${isLocked ? `
+              <button onclick="unlockDevice('${d.id}', '${d.customerName}')" class="flex-1 py-2.5 rounded-xl gradient-unlock text-white font-bold text-xs heading-font flex items-center justify-center space-x-1.5 active:scale-95 transition">
+                <span>🔓 UNLOCK PHONE</span>
+              </button>
+            ` : `
+              <button onclick="lockDevice('${d.id}', '${d.customerName}')" class="flex-1 py-2.5 rounded-xl gradient-lock text-white font-bold text-xs heading-font flex items-center justify-center space-x-1.5 active:scale-95 transition">
+                <span>🔒 LOCK PHONE NOW</span>
+              </button>
+            `}
+            <button onclick="sendWhatsApp('${d.customerName}', '${d.customerPhone}', '${d.phoneModel || 'Smartphone'}')" title="WhatsApp Reminder Bhejein" class="px-3 py-2.5 rounded-xl bg-[#1E293B] text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1 active:scale-95 transition">
+              <span>💬 WhatsApp</span>
+            </button>
+            <button onclick="releaseDevice('${d.id}', '${d.customerName}')" title="Qist Khatam (Permanent Release)" class="px-3 py-2.5 rounded-xl bg-[#1E293B] text-slate-400 hover:text-emerald-400 border border-[#334155] text-xs font-semibold active:scale-95 transition">
+              Release
+            </button>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    function sendWhatsApp(name, phone, model) {
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      const msg = encodeURIComponent(`Assalam-o-Alaikum ${name} bhai, aapke mobile (${model}) ki installment baqi hai. Barah-e-karam jald ada karein taake phone service mutasir na ho. Shukriya!`);
+      window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
+    }
+
+    async function lockDevice(id, name) {
+      currentSimulatedId = id;
+      playBeep('lock');
+      await fetch(`/api/devices/${id}/lock`, { method: 'POST' });
+      await fetchDevices();
+    }
+
+    async function unlockDevice(id, name) {
+      currentSimulatedId = id;
+      playBeep('unlock');
+      await fetch(`/api/devices/${id}/unlock`, { method: 'POST' });
+      await fetchDevices();
+    }
+
+    async function releaseDevice(id, name) {
+      if (!confirm(`Kya ${name} ki sari qistein ada ho chuki hain? Release karne se mobile se saari security khatam ho kar mobile 100% normal ho jayega.`)) return;
+      await fetch(`/api/devices/${id}/release`, { method: 'POST' });
+      fetchDevices();
+    }
+
+    function openAddModal() {
+      document.getElementById('addModal').classList.remove('hidden');
+      document.getElementById('formContainer').classList.remove('hidden');
+      document.getElementById('qrContainer').classList.add('hidden');
+      document.getElementById('qrcode').innerHTML = '';
+      document.getElementById('modalTitle').innerText = 'Naya Phone Enroll Karein';
+    }
+
+    function closeAddModal() {
+      document.getElementById('addModal').classList.add('hidden');
+    }
+
+    async function submitNewDevice() {
+      const name = document.getElementById('custName').value.trim();
+      const phone = document.getElementById('custPhone').value.trim();
+      const model = document.getElementById('custModel').value.trim();
+      const imei = document.getElementById('custImei').value.trim();
+
+      if (!name || !phone) {
+        alert("Naam aur phone number darj karein!");
+        return;
+      }
+
+      const res = await fetch('/api/devices/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: name,
+          customerPhone: phone,
+          phoneModel: model,
+          imei: imei
+        })
+      });
+
+      const data = await res.json();
+      if (data.device) {
+        document.getElementById('formContainer').classList.add('hidden');
+        document.getElementById('qrContainer').classList.remove('hidden');
+        document.getElementById('modalTitle').innerText = 'Enrollment QR Code';
+        
+        new QRCode(document.getElementById("qrcode"), {
+          text: JSON.stringify(data.qrPayload),
+          width: 200,
+          height: 200
+        });
+
+        currentSimulatedId = data.device.id;
+        fetchDevices();
+      }
+    }
+
+    // Initial load
+    fetchSettings();
+    fetchDevices();
+    setInterval(fetchDevices, 4000);
+  </script>
+</body>
+</html>

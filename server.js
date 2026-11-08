@@ -321,8 +321,8 @@ app.post('/api/devices/add', async (req, res) => {
             "ownerPhone": newDevice.ownerPhone,
             "emergencyPhone": settings.emergencyPhone || "1122",
             "serverUrl": `${protocol === 'https' ? 'wss' : 'ws'}://${host}/ws`
-            "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED": true
-        }
+        },
+        "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED": true
     };
 
     if (checksum) {
